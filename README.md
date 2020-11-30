@@ -74,7 +74,6 @@ Alongside sight, they also have a 3x3 smell matrix that gives them information a
 
 ## Scenarios
  
-**(IN PROGRESS: CHECK BACK SOON)**
 These scenarios will have more details soon to help you out and give you hints as to how to solve them.
 Be sure to update your code frequently.
 
@@ -86,7 +85,7 @@ NUM_AGENTS = 1
 NUM_EVIL = 0
 
 **Details**
-This is very similar to your tasks for Assignment 1. Your job is to give the player character the ability to navigate the new terrain.
+This is very similar to your tasks for Assignment 1. Your job is to give the player character the ability to navigate the new terrain. 
 
 
 ### Scenario 2: Aggression Avoidance
@@ -113,7 +112,29 @@ In addition to Scenario 2's task, the player now has to compete for food with ot
 Please answer these questions to the best of your abilities. They won't be graded on correctness, but more regarding the amount thought you put into them. It's not difficult to get full points on each question.
 
 **(IN PROGRESS: CHECK BACK SOON)**
- 
+
+### Scenario 1:
+
+1) Do you expect your player to perform better with a 5x5 sight matrix for the terrain vs a 3x3? How far ahead does your model 'plan' its movements?
+
+2) Do you expect your player to tend towards staying in the low ground, or the high ground? Would this change with different terrain patterns?
+
+3) Do you expect a model trained with a specific terrain map to perform the same as on a different map?
+
+
+### Scenario 2:
+
+1) Considering only the scent matrices for food and other agents, how would you rewrite smart mouse to perform better in this scenario?
+
+2) In Scenarios 1 and 2, is it necessary to use the agent and danger **sight** matrices? Why or why not?
+
+
+### Scenario 3: 
+   1) Do you expect your player to still take terrain navigation into account, or do you think other factors will take priority?
+
+   2) What effect does having multiple neutral agents (That also want the same resource that you do) also show up in the creature smell matrix have on the simulation? Why does this make the danger sight matrix useful? 
+
+
 ## Extra Credit
 
 Extra credit is awarded for creating, implementing, and solving a unique scenario. 
