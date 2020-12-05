@@ -174,9 +174,12 @@ class Agent(GameObject):
         self.sense.id = self.id
         self.good_choice_chance = DEFAULT_INTELLIGENCE
         self.score = 0
+        self.deltaEnergy = 0
+        self.deltaDamage = 0
 
     def consume(self,energy):
         self.energy += energy
+        self.deltaEnergy += energy
         if self.energy > self.max_energy:
             self.energy = self.max_energy
         # EC Idea: What about other ways to calculate score?
@@ -246,6 +249,7 @@ class Agent(GameObject):
 
     def take_damage(self, damage):
         self.health -= damage
+        self.deltaDamage = -damage * 10
         if self.health >= 0:
             self.calc_color()
         else:
@@ -681,13 +685,15 @@ class Grid:
 
 class GameManager:
     """ A class that controls the logic and graphics of the game. """
-    def __init__(self,width,height):
+    def __init__(self,width,height, round):
         self.grid = Grid(height, width)
         self.agents = []
         self.plants = []
-        
+
+        self.round = round
+
         self.addAgent()
-        self.font = pg.font.Font(path.join(ABS_PATH,"Retron2000.ttf"), 25)
+        self.font = pg.font.Font(path.join(ABS_PATH,"Retron2000.ttf"), 12)
 
         self.agents[0].setType("main")
         self.main_agent = self.agents[0]
@@ -699,7 +705,7 @@ class GameManager:
         for i in range(MAX_NUM_FOOD_ON_GRID):
             self.addPlant()
         
-    def draw(self,game_window):
+    def draw(self,game_window, mouse):
         self.grid.draw(game_window)
         # Draw plants
         for plant in self.plants:
@@ -713,9 +719,13 @@ class GameManager:
         
         labels_y_start = 500
         game_window.blit(self.font.render(f"HEALTH: {self.main_agent.health}", 0, (255, 0, 0)), (10, labels_y_start))
-
-        game_window.blit(self.font.render(f"ENERGY: {round(self.main_agent.energy,2)}", 0, (255, 0, 0)), (10, labels_y_start+30))
-        game_window.blit(self.font.render(f"SCORE:   {round(self.main_agent.score,2)}", 0, (255, 0, 0)), (10, labels_y_start+60))
+        game_window.blit(self.font.render(f"ENERGY: {round(self.main_agent.energy,2)}", 0, (255, 0, 0)), (10, labels_y_start+15))
+        game_window.blit(self.font.render(f"SCORE:   {round(self.main_agent.score,2)}", 0, (255, 0, 0)), (10, labels_y_start+30))
+        game_window.blit(self.font.render(f"mouse epsilon:   {round(mouse.epsilon,2)}", 0, (255, 0, 0)), (10, labels_y_start+45))
+        game_window.blit(self.font.render(f"mouse alpha:   {round(mouse.alpha,2)}", 0, (255, 0, 0)), (10, labels_y_start+60))
+        game_window.blit(self.font.render(f"round:   {self.round}", 0, (255, 0, 0)), (10, labels_y_start+75))
+        game_window.blit(self.font.render(f"mouse updates:   {mouse.updateCount}", 0, (255, 0, 0)), (10, labels_y_start + 90))
+        game_window.blit(self.font.render(f"mouse episodes completed:   {mouse.episodeCount + self.round}", 0, (255, 0, 0)), (10, labels_y_start + 105))
 
     def plantTick(self):
         for plant in self.plants:
@@ -776,7 +786,6 @@ class GameManager:
 
         agent.sense.update(agent.x,agent.y,self.grid,self.agents,self.plants)
 
-
     def logicTick(self,player_move=None):
         random.shuffle(self.plants)
         random.shuffle(self.agents)
@@ -804,7 +813,7 @@ class GameManager:
         agent = EvilAgent(x,y)
         self.agents.append(agent)
 
-    def setOccupiedGrid():
+    def setOccupiedGrid(self):
         self.grid.occupied_grid = np.zeros((GAME_GRID_WIDTH,GAME_GRID_HEIGHT))
         for plant in self.plants:
             self.grid.occupied_grid[plant.x][plant.y] = 1
