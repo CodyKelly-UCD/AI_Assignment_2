@@ -12,17 +12,16 @@ class SarsaMouse:
         self.alpha = 1
         self.gamma = 0.9
         self.epsilon = 1
-        self.lam = 0.7
-        self.eligibilityCutoff = 0.0001
+        self.lam = 0.89
+        self.eligibilityCutoff = 0.00001
 
         self.episodeCount = 0
         self.updateCount = 0
         self.k = 0
         self.lastK = 0
 
-        self.lastStateActions = []
         self.actionCount = 8
-        self.scentSpace = np.linspace(0.0, 255.0, 4).tolist()
+        self.scentSpace = np.linspace(0.0, 100.0, 3).tolist()
         self.terrainSpace = np.linspace(-125.0, 125.0, 4).tolist()
 
         self.QE = {}
@@ -31,22 +30,28 @@ class SarsaMouse:
             with open(MOUSE_SAVE_FNAME) as json_file:
                 data = json.load(json_file)
                 self.load(data)
-        except:
-            pass
+        except Exception as e:
+            print(e)
 
     def decayEpsilon(self, k):
-        self.lastK = k
-        self.epsilon = 1. / (self.k + k) ** .2
-        self.alpha = 1. / (self.k + k) ** .2
+        pass
+        # self.lastK = k
+        # newValue = 1. - ((self.k + k) / 2000.)
+        # try:
+        #     assert newValue > 0
+        # except:
+        #     self.save()
+        #     print("\a")
+        #     exit(0)
+        # self.epsilon = self.alpha = newValue
 
-    def update(self, reward):
-        if reward != 0: print(f"R: {round(reward, 2)}")
-        state, action = self.lastStateActions.pop()
-        statePrime, actionPrime = self.lastStateActions[0]
-
+    def update(self, state, action, statePrime, actionPrime, reward):
         e = 1
         Q = 0
         QPrime = 0
+
+        state = self.getStateFromSense(state)
+        statePrime = self.getStateFromSense(statePrime)
 
         try:
             Q, e = self.QE[state, action]
@@ -89,6 +94,19 @@ class SarsaMouse:
         return choice
 
     def getAction(self, sense):
+        state = self.getStateFromSense(sense)
+
+        # Decide whether we act greedily or explore randomly based on epsilon
+        randValue = random.random()
+        action = 0
+        if randValue <= self.epsilon:
+            action = random.randint(0, self.actionCount - 1)
+        else:
+            action = self.getActionGreedily(state)
+
+        return action
+
+    def getStateFromSense(self, sense):
         foodMatrix = sense.food_smell
         terrainSight = sense.elevation_sight
         currentTerrain = terrainSight[2][2]
@@ -106,24 +124,20 @@ class SarsaMouse:
         ])
         dangerState = self.getStateFromMatrix(simplifiedDangerSight, [0.,1.], False)
 
+        foodSight = sense.food_sight
+        simplifiedFoodSight = np.array([
+            [1. if 255. in foodSight[np.ix_([0,2],[0,2])] else 0., 1. if 255. in foodSight[np.ix_([0,2],[2,4])] else 0.],
+            [1. if 255. in foodSight[np.ix_([2,4],[0,2])] else 0., 1. if 255. in foodSight[np.ix_([2,4],[2,4])] else 0.],
+        ])
+        foodSightState = self.getStateFromMatrix(simplifiedFoodSight, [0.,1.], False)
+
         simplifiedFoodSmell = np.array([
             [getAvgOfSubMatrix(foodMatrix, [0,1], [0,1]),getAvgOfSubMatrix(foodMatrix, [0,1], [1,2])],
             [getAvgOfSubMatrix(foodMatrix, [1,2], [0,1]),getAvgOfSubMatrix(foodMatrix, [1,2], [1,2])]
         ])
-        foodState = self.getStateFromMatrix(simplifiedFoodSmell, self.scentSpace)
+        foodSmellState = self.getStateFromMatrix(simplifiedFoodSmell, self.scentSpace, False)
 
-        state = (foodState, dangerState, terrainState)
-
-        # Decide whether we act greedily or explore randomly based on epsilon
-        randValue = random.random()
-        action = 0
-        if randValue <= self.epsilon:
-            action = random.randint(0, self.actionCount - 1)
-        else:
-            action = self.getActionGreedily(state)
-
-        self.lastStateActions.append((state, action))
-        return action
+        return (foodSightState, foodSmellState, dangerState, terrainState)
 
     def getStateFromMatrix(self, matrix, space, skipMiddle = True):
         sum = 0
@@ -131,7 +145,7 @@ class SarsaMouse:
         middleIndex = int(matrix.shape[0] / 2) * matrix.shape[1] + int(matrix.shape[1] / 2)
         for e in np.digitize(matrix, space).flat:
             if not (skipMiddle and count == middleIndex):  # ignore middle value because that's where our agent is
-                sum += (e - 1) * len(space) ** count
+                sum += (e - 1) * (len(space) - 1) ** count
                 count += 1
         return int(sum)
 
@@ -147,15 +161,17 @@ class SarsaMouse:
             "updateCount": self.updateCount,
             "episodeCount": self.episodeCount + self.lastK,
             "possibleActions": self.actionCount,
-            "lastStateActions": self.lastStateActions,
             "scentSpace": self.scentSpace,
             "terrainSpace": self.terrainSpace,
             "dataKeysState": [k[0] for k in self.QE.keys()],
             "dataKeysAction": [k[1] for k in self.QE.keys()],
             "dataValues": [v for v in self.QE.values()]
         }
-        with open(MOUSE_SAVE_FNAME, 'w') as json_file:
-            json.dump(data, json_file)
+        try:
+            with open(MOUSE_SAVE_FNAME, 'w') as json_file:
+                json.dump(data, json_file)
+        except Exception as e:
+            print(e)
 
     def load(self, data):
         self.k = data["k"]
@@ -167,7 +183,6 @@ class SarsaMouse:
         self.updateCount = data["updateCount"]
         self.episodeCount = data["episodeCount"]
         self.actionCount = data["possibleActions"]
-        self.lastStateActions = [(tuple(s[0]), s[1]) for s in data["lastStateActions"]]
         self.scentSpace = data["scentSpace"]
         self.terrainSpace = data["terrainSpace"]
         qeKeysState = data["dataKeysState"]
@@ -178,3 +193,5 @@ class SarsaMouse:
             keyState = tuple(qeKeysState[i])
             value = tuple(qeValues[i])
             self.QE[keyState, keyAction] = value
+
+if __name__ == "__main__":

@@ -179,7 +179,7 @@ class Agent(GameObject):
 
     def consume(self,energy):
         self.energy += energy
-        self.deltaEnergy += energy
+        self.deltaEnergy += energy * 20
         if self.energy > self.max_energy:
             self.energy = self.max_energy
         # EC Idea: What about other ways to calculate score?
@@ -215,6 +215,7 @@ class Agent(GameObject):
         self.x = x
         self.y = y
         self.energy -= difficulty
+        self.deltaEnergy -= difficulty
 
     def heal(self):
         if self.health < MAX_HEALTH:
@@ -249,7 +250,7 @@ class Agent(GameObject):
 
     def take_damage(self, damage):
         self.health -= damage
-        self.deltaDamage = -damage * 10
+        self.deltaDamage = -damage * 2
         if self.health >= 0:
             self.calc_color()
         else:
@@ -548,7 +549,7 @@ class Grid:
     def calcHeightMap(self):
         self.elevation_map = np.random.randint(0,high=250, size=(GAME_GRID_WIDTH,GAME_GRID_HEIGHT))
         img_path = path.join(ABS_PATH,"height.png")
-        img = Image.fromarray(self.elevation_map).convert('L').filter(ImageFilter.GaussianBlur(1))
+        img = Image.fromarray(self.elevation_map, mode='L').filter(ImageFilter.GaussianBlur(1.2))
         img.save(img_path)
         self.elevation_map = np.asarray(Image.open(img_path)).copy()
         arr_max = self.elevation_map.max()
