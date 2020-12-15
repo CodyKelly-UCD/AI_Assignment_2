@@ -6,7 +6,7 @@ import pickle
 # Used to determine how many frames are skipped.
 # Helps when you want the gamelogic to move faster than
 # Your system can draw it.
-SKIP_FRAMES = 000
+SKIP_FRAMES = 0
 
 # Number of frames to draw per second.
 FRAMES_PER_SECOND = 5

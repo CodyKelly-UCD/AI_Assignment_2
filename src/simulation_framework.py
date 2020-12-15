@@ -179,7 +179,7 @@ class Agent(GameObject):
 
     def consume(self,energy):
         self.energy += energy
-        self.deltaEnergy += energy * 20
+        self.deltaEnergy += energy
         if self.energy > self.max_energy:
             self.energy = self.max_energy
         # EC Idea: What about other ways to calculate score?

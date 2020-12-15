@@ -21,7 +21,7 @@ class SarsaMouse:
         self.lastK = 0
 
         self.actionCount = 8
-        self.scentSpace = np.linspace(0.0, 100.0, 3).tolist()
+        self.scentSpace = np.linspace(0.0, 100.0, 4).tolist()
         self.terrainSpace = np.linspace(-125.0, 125.0, 4).tolist()
 
         self.QE = {}
@@ -34,16 +34,16 @@ class SarsaMouse:
             print(e)
 
     def decayEpsilon(self, k):
-        pass
-        # self.lastK = k
-        # newValue = 1. - ((self.k + k) / 2000.)
-        # try:
-        #     assert newValue > 0
-        # except:
-        #     self.save()
-        #     print("\a")
-        #     exit(0)
-        # self.epsilon = self.alpha = newValue
+        # pass
+        self.lastK = k
+        newValue = 1 / (self.k + k) ** .5
+        try:
+            assert newValue > 0
+        except:
+            self.save()
+            print("\a")
+            exit(0)
+        self.epsilon = self.alpha = newValue
 
     def update(self, state, action, statePrime, actionPrime, reward):
         e = 1
@@ -111,42 +111,57 @@ class SarsaMouse:
         terrainSight = sense.elevation_sight
         currentTerrain = terrainSight[2][2]
         simplifiedTerrainSight = np.array([
-            [currentTerrain - getAvgOfSubMatrix(terrainSight,[0,1],[0,1]),currentTerrain - getAvgOfSubMatrix(terrainSight,[0,1],[2]),currentTerrain - getAvgOfSubMatrix(terrainSight,[0,1],[3,4])],
-            [currentTerrain - getAvgOfSubMatrix(terrainSight,[2],[0,1]),0.,currentTerrain - getAvgOfSubMatrix(terrainSight,[2],[3,4])],
-            [currentTerrain - getAvgOfSubMatrix(terrainSight,[3,4],[0,1]),currentTerrain - getAvgOfSubMatrix(terrainSight,[3,4],[2]),currentTerrain - getAvgOfSubMatrix(terrainSight,[3,4],[3,4])],
+            [currentTerrain - getAvgOfSubMatrix(terrainSight, [0, 1], [0, 1]),
+             currentTerrain - getAvgOfSubMatrix(terrainSight, [0, 1], [2]),
+             currentTerrain - getAvgOfSubMatrix(terrainSight, [0, 1], [3, 4])],
+            [currentTerrain - getAvgOfSubMatrix(terrainSight, [2], [0, 1]), 0.,
+             currentTerrain - getAvgOfSubMatrix(terrainSight, [2], [3, 4])],
+            [currentTerrain - getAvgOfSubMatrix(terrainSight, [3, 4], [0, 1]),
+             currentTerrain - getAvgOfSubMatrix(terrainSight, [3, 4], [2]),
+             currentTerrain - getAvgOfSubMatrix(terrainSight, [3, 4], [3, 4])],
         ])
         terrainState = self.getStateFromMatrix(simplifiedTerrainSight, self.terrainSpace)
 
         dangerSight = sense.danger_sight
         simplifiedDangerSight = np.array([
-            [1. if 255. in dangerSight[np.ix_([0,2],[0,2])] else 0., 1. if 255. in dangerSight[np.ix_([0,2],[2,4])] else 0.],
-            [1. if 255. in dangerSight[np.ix_([2,4],[0,2])] else 0., 1. if 255. in dangerSight[np.ix_([2,4],[2,4])] else 0.],
+            [1. if np.float64(255.) in dangerSight[np.ix_([0, 2], [0, 2])] else 0.,
+             1. if np.float64(255.) in dangerSight[np.ix_([0, 2], [2, 4])] else 0.],
+            [1. if np.float64(255.) in dangerSight[np.ix_([2, 4], [0, 2])] else 0.,
+             1. if np.float64(255.) in dangerSight[np.ix_([2, 4], [2, 4])] else 0.],
         ])
-        dangerState = self.getStateFromMatrix(simplifiedDangerSight, [0.,1.], False)
+        dangerState = self.getStateFromMatrix(simplifiedDangerSight, [0., 1.], False)
 
         foodSight = sense.food_sight
         simplifiedFoodSight = np.array([
-            [1. if 255. in foodSight[np.ix_([0,2],[0,2])] else 0., 1. if 255. in foodSight[np.ix_([0,2],[2,4])] else 0.],
-            [1. if 255. in foodSight[np.ix_([2,4],[0,2])] else 0., 1. if 255. in foodSight[np.ix_([2,4],[2,4])] else 0.],
+            [1. if np.float64(255.) in foodSight[np.ix_([0, 2], [0, 2])] else 0.,
+             1. if np.float64(255.) in foodSight[np.ix_([0, 2], [2, 4])] else 0.],
+            [1. if np.float64(255.) in foodSight[np.ix_([2, 4], [0, 2])] else 0.,
+             1. if np.float64(255.) in foodSight[np.ix_([2, 4], [2, 4])] else 0.],
         ])
-        foodSightState = self.getStateFromMatrix(simplifiedFoodSight, [0.,1.], False)
+        foodSightState = self.getStateFromMatrix(simplifiedFoodSight, [0., 1.], False)
 
         simplifiedFoodSmell = np.array([
-            [getAvgOfSubMatrix(foodMatrix, [0,1], [0,1]),getAvgOfSubMatrix(foodMatrix, [0,1], [1,2])],
-            [getAvgOfSubMatrix(foodMatrix, [1,2], [0,1]),getAvgOfSubMatrix(foodMatrix, [1,2], [1,2])]
+            [getAvgOfSubMatrix(foodMatrix, [0, 1], [0, 1]), getAvgOfSubMatrix(foodMatrix, [0, 1], [1, 2])],
+            [getAvgOfSubMatrix(foodMatrix, [1, 2], [0, 1]), getAvgOfSubMatrix(foodMatrix, [1, 2], [1, 2])]
         ])
         foodSmellState = self.getStateFromMatrix(simplifiedFoodSmell, self.scentSpace, False)
 
-        return (foodSightState, foodSmellState, dangerState, terrainState)
+        return foodSightState, foodSmellState, dangerState, terrainState
 
     def getStateFromMatrix(self, matrix, space, skipMiddle = True):
+        if skipMiddle and (matrix.shape[0] % 2 == 0 or matrix.shape[1] % 2 == 0):
+            print("Trying to skip middle value of an array with an even number of elements.")
+            exit(1)
         sum = 0
         count = 0
+        digit = 0
+        length = len(np.digitize(matrix, space).flat) - (2 if skipMiddle else 1)
         middleIndex = int(matrix.shape[0] / 2) * matrix.shape[1] + int(matrix.shape[1] / 2)
         for e in np.digitize(matrix, space).flat:
-            if not (skipMiddle and count == middleIndex):  # ignore middle value because that's where our agent is
-                sum += (e - 1) * (len(space) - 1) ** count
-                count += 1
+            if skipMiddle and not count == middleIndex or not skipMiddle:  # ignore middle value because that's where our agent is
+                sum += (e - 1) * (len(space) - 1) ** (length - digit)
+                digit += 1
+            count += 1
         return int(sum)
 
     def save(self):
@@ -195,3 +210,17 @@ class SarsaMouse:
             self.QE[keyState, keyAction] = value
 
 if __name__ == "__main__":
+    mouse = SarsaMouse()
+    loopRange = len(mouse.scentSpace) - 1
+    loopStep = mouse.scentSpace[1] - mouse.scentSpace[0]
+    for i1 in range(loopRange):
+        for i2 in range(loopRange):
+            for i3 in range(loopRange):
+                for i4 in range(loopRange):
+                    # for i5 in range(loopRange):
+                    #     for i6 in range(loopRange):
+                    #         for i7 in range(loopRange):
+                    #             for i8 in range(loopRange):
+                    #                 for i9 in range(loopRange):
+                    matrix = np.array([[i1 * loopStep,i2 * loopStep],[i3 * loopStep,i4 * loopStep]])
+                    print(f"{i1}{i2}{i3}{i4}: {mouse.getStateFromMatrix(matrix, mouse.scentSpace, True)}")
